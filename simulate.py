@@ -10,13 +10,14 @@ import subprocess
             - Flask server on Pi with /capture, /get_image, /send_to_cloud endpoints?
             - Need Rasp. Pi's address and Cloud servers address for take_and_send_picture()
 
-        2) Final output function?
+        2) Implement a final output function?
             - Computes stats based off the logs recieved from the Pi
             - Outputs stats to user, and makes reccomendation on whether or not to use Edge or Cloud
 
-        3) Add retry logic for HTTP requests in take_and_send_picture()?
+        3) Implement retry logic for HTTP requests?
 
-        4) When and where to receive logs/results from the Pi?
+        4) Implement get_results_from_pi()
+			- Would receive the logs/stats tracked by the Pi so we can make a final output for the user
 
         - Pi needs to log:
             start time -> begin when it sends the picture to the execution target
@@ -32,6 +33,7 @@ import subprocess
             /send_to_cloud -> send image to cloud server
 	        /log_results -> accept workload results from edge device/simulate.py
 	        /get_logs -> return logs for edge device/simulate.py to compute stats/recommendations for final output to user
+			And maybe more
 
         - Cloud server questions:
             - Will the cloud server send the results of its workload directly to the Rasp. Pi
