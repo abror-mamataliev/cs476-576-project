@@ -198,7 +198,7 @@ def send_cloud_picture(pi_address, cloud_address):
             cloud_address: IP or hostname of the cloud server -> str
     """
 
-    # Should we also send the Dockerfile to the cloud server? Or will it already have the Dockerfile?
+    # Will it already have the Dockerfile?
 
     try:
         print("\tTelling Rasp. Pi to take the picture and send it to the cloud...\n")
@@ -261,7 +261,7 @@ def main():
     # Execution target is cloud
     else:
         # Tell Rasp. Pi to send the image to the cloud server so it can run the workload
-        send_cloud_picture(pi_address, cloud_address)    # Will the cloud server already have the dockerfile, or should we send it to the server from here?
+        send_cloud_picture(pi_address, cloud_address)    # Will the cloud server already have the Docker file on it?
 
     # Need to somehow get results/logs from Rasp. Pi still
     # get_results_from_pi()
