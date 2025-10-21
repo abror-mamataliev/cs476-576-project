@@ -1,14 +1,13 @@
 import os
 import requests
-import time
 import subprocess
 
 """
     TO DO LIST AND NOTES TO SELF:
 
         1) Make sure communication between this script and Pi is all good
-            - Flask server on Pi with /capture, /get_image, /send_to_cloud endpoints?
-            - Need Rasp. Pi's address and Cloud servers address for take_and_send_picture()
+            - Flask server on Pi with endpoints?
+            - Need Rasp. Pi's address and Cloud servers address for communication
 
         2) Implement a final output function?
             - Computes stats based off the logs recieved from the Pi
@@ -28,9 +27,8 @@ import subprocess
         - JSON for log formatting?
 
         - Pi will need these end points i think:
-            /capture -> capture image
-            /get_image -> send image back to edge device/simulate.py
-            /send_to_cloud -> send image to cloud server
+            /send_to_edge -> capture image and send it to edge device
+            /send_to_cloud -> capture image and send it to cloud
 	        /log_results -> accept workload results from edge device/simulate.py
 	        /get_logs -> return logs for edge device/simulate.py to compute stats/recommendations for final output to user
 			And maybe more
@@ -87,7 +85,7 @@ def get_input():
 
 
 
-def pi_take_picture(pi_address):
+def send_edge_picture(pi_address):
     """
     Tells the Raspberry Pi to take a picture and to send it to this machine
     Saves the picture to a local file path
@@ -99,22 +97,13 @@ def pi_take_picture(pi_address):
         picture_file_path: The file path to the image we received from the Rasp. Pi -> string
     """
     
-    # Tells Raspberry Pi to capture the image
+    # Tells Raspberry Pi to capture the image and send to this machine
     try:
-        print("\tTelling Rasp. Pi to take a picture...\n")
-        # Sending HTTP get request to Rasp. Pi at port 5000, hitting /capture endpoint
-        requests.get(f"http://{pi_address}:5000/capture", timeout=5)
+        print("\tTelling Rasp. Pi to take a picture and send to this machine...\n")
+        # Sending HTTP get request to Rasp. Pi at port 5000, hitting /send_to_edge endpoint
+        img_response = requests.get(f"http://{pi_address}:5000/send_to_edge", timeout=5)
     except Exception as e:
-        print(f"\t\nError: Unable to tell Raspberry Pi to capture image: {e}\n")
-        return None    
-
-    # Tells Raspberry Pi to send image to this machine
-    try:
-        print("\tTelling Rasp. Pi to send picture to this machine...\n")
-        # Sending HTTP get request to Rasp. Pi at port 5000, hitting /get_image endpoint
-        img_response = requests.get(f"http://{pi_address}:5000/get_image", timeout=5)
-    except Exception as e:
-        print(f"\t\nError: Unable to tell Raspberry Pi to send image to this machine: {e}\n")
+        print(f"\t\nError: Unable to tell Raspberry Pi to capture picture and send to this machine: {e}\n")
         return None        
     
     # File path to the image we got from the Rasp. Pi
@@ -200,9 +189,9 @@ def run_workload_on_edge(dockerfile_path, picture_file_path):
 
 
 
-def run_workload_on_cloud(pi_address, cloud_address):
+def send_cloud_picture(pi_address, cloud_address):
     """
-        Tells Rasp. Pi to send the picture it took to cloud server
+        Tells Rasp. Pi to take a picture and send it to the cloud
 
         Args:
             pi_address: IP or hostname of the Pi -> str
@@ -212,8 +201,8 @@ def run_workload_on_cloud(pi_address, cloud_address):
     # Should we also send the Dockerfile to the cloud server? Or will it already have the Dockerfile?
 
     try:
-        print("\tTelling Rasp. Pi to send the picture to the cloud server...\n")
-        # Tells Raspberry Pi to push image to cloud server
+        print("\tTelling Rasp. Pi to take the picture and send it to the cloud...\n")
+        # Tells Raspberry Pi to take image and send it to the cloud
         requests.post(f"http://{pi_address}:5000/send_to_cloud", json={"cloud_address": cloud_address}, timeout=5)
     except Exception as e:
         print(f"\t\nError: Unable to tell Pi to send picture to cloud: {e}\n")
@@ -254,15 +243,15 @@ def main():
     execution_target, deadline, dockerfile_path = get_input()
 
     print("\nBeginning simulation...\n")
-
-    # Tell Rasp. Pi to capture image, store it locally on this machine
-    picture_file_path = pi_take_picture(pi_address)
-    if not picture_file_path:
-        print("\t\nFailed to get image from Raspberry Pi\n")
-        return
     
     # Execution target is edge
     if execution_target == "edge":
+        # Tell Rasp. Pi to capture image, store it locally on this machine
+        picture_file_path = send_edge_picture(pi_address)
+        if not picture_file_path:
+            print("\t\nFailed to get image from Raspberry Pi\n")
+            return
+
         # Run the image classification docker workload on this machine to simulate edge computing
         result = run_workload_on_edge(dockerfile_path, picture_file_path)
 
@@ -272,7 +261,7 @@ def main():
     # Execution target is cloud
     else:
         # Tell Rasp. Pi to send the image to the cloud server so it can run the workload
-        run_workload_on_cloud(pi_address, cloud_address)    # Will the cloud server already have the dockerfile, or should we send it to the server from here?
+        send_cloud_picture(pi_address, cloud_address)    # Will the cloud server already have the dockerfile, or should we send it to the server from here?
 
     # Need to somehow get results/logs from Rasp. Pi still
     # get_results_from_pi()
