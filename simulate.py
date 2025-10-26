@@ -1,6 +1,5 @@
 import os
 import requests
-import time
 import subprocess
 
 """
@@ -42,6 +41,7 @@ import subprocess
             - Will the cloud server have the Dockerfile already on it, or will this script need
                 to send it the Dockerfile when the execution_target == "cloud"
 """
+
 
 def get_input():
     """
@@ -85,8 +85,6 @@ def get_input():
     return execution_target, deadline, dockerfile_path
 
 
-
-
 def pi_take_picture(pi_address):
     """
     Tells the Raspberry Pi to take a picture and to send it to this machine
@@ -98,7 +96,7 @@ def pi_take_picture(pi_address):
     Returns:
         picture_file_path: The file path to the image we received from the Rasp. Pi -> string
     """
-    
+
     # Tells Raspberry Pi to capture the image
     try:
         print("\tTelling Rasp. Pi to take a picture...\n")
@@ -106,25 +104,23 @@ def pi_take_picture(pi_address):
         requests.get(f"http://{pi_address}:5000/capture", timeout=5)
     except Exception as e:
         print(f"\t\nError: Unable to tell Raspberry Pi to capture image: {e}\n")
-        return None    
+        return None
 
-    # Tells Raspberry Pi to send image to this machine
+        # Tells Raspberry Pi to send image to this machine
     try:
         print("\tTelling Rasp. Pi to send picture to this machine...\n")
         # Sending HTTP get request to Rasp. Pi at port 5000, hitting /get_image endpoint
         img_response = requests.get(f"http://{pi_address}:5000/get_image", timeout=5)
     except Exception as e:
         print(f"\t\nError: Unable to tell Raspberry Pi to send image to this machine: {e}\n")
-        return None        
-    
-    # File path to the image we got from the Rasp. Pi
+        return None
+
+        # File path to the image we got from the Rasp. Pi
     picture_file_path = "/tmp/latest_image.jpg"
-    with open(picture_file_path, "wb") as f: # Open the file to binary write
-        f.write(img_response.content) # Write image into that file
+    with open(picture_file_path, "wb") as f:  # Open the file to binary write
+        f.write(img_response.content)  # Write image into that file
 
     return picture_file_path
-
-
 
 
 def run_workload_on_edge(dockerfile_path, picture_file_path):
@@ -162,10 +158,10 @@ def run_workload_on_edge(dockerfile_path, picture_file_path):
     try:
         # Build the Docker image
         subprocess.run(
-            ["docker", "build", "-t", image_tag, "-f", dockerfile_path, "."], # Run this command in the shell
-            check=True, # If command fails, raise CalledProcessError
-            stdout=subprocess.PIPE, # capture standard output
-            stderr=subprocess.PIPE # capture standard errors
+            ["docker", "build", "-t", image_tag, "-f", dockerfile_path, "."],  # Run this command in the shell
+            check=True,  # If command fails, raise CalledProcessError
+            stdout=subprocess.PIPE,  # capture standard output
+            stderr=subprocess.PIPE  # capture standard errors
         )
     except subprocess.CalledProcessError as e:
         return {"status": "fail", "classification": f"Build failed: {e.stderr.decode()}"}
@@ -177,27 +173,27 @@ def run_workload_on_edge(dockerfile_path, picture_file_path):
         # Run shell command
         result = subprocess.run(
             [
-                "docker", "run", "--rm", # Start a container from an image, --rm removes the container once its done running
-                "-v", f"{os.path.abspath(picture_file_path)}:/input_image.jpg", # Mounts a file from this machine into the container’s filesystem
-                image_tag # Name of the image
+                "docker", "run", "--rm",
+                # Start a container from an image, --rm removes the container once its done running
+                "-v", f"{os.path.abspath(picture_file_path)}:/input_image.jpg",
+                # Mounts a file from this machine into the container’s filesystem
+                image_tag  # Name of the image
             ],
-            capture_output=True, # Captures stdout and stderr from the container
-            text=True, # Decodes output as a string
-            check=True # If Docker fails, raisese CalledProcessError
+            capture_output=True,  # Captures stdout and stderr from the container
+            text=True,  # Decodes output as a string
+            check=True  # If Docker fails, raisese CalledProcessError
         )
 
-        return{
+        return {
             "status": "success",
             "classification": result.stdout.strip()
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "status": "fail",
             "classification": f"Execution failed: {e.stderr}"
         }
-    
-
 
 
 def run_workload_on_cloud(pi_address, cloud_address):
@@ -220,8 +216,6 @@ def run_workload_on_cloud(pi_address, cloud_address):
         return None
 
 
-
-
 def send_workload_results_to_pi(pi_address, status, classification):
     """
         Sends the results of the edge-computed workload to the Rasp. Pi as json
@@ -231,7 +225,7 @@ def send_workload_results_to_pi(pi_address, status, classification):
             status: Whether or not picture could be classified -> "success" or "fail"
             classification: What the result of the workload is if it succeeded -> string
     """
-    
+
     print("\nSending results of the workload to Raspberry Pi...\n")
     try:
         requests.post(
@@ -242,10 +236,7 @@ def send_workload_results_to_pi(pi_address, status, classification):
         print(f"\t\nError: Could not send results back to Pi: {e}\n")
 
 
-
-
 def main():
-
     # Placeholders
     pi_address = "..."
     cloud_address = "..."
@@ -260,7 +251,7 @@ def main():
     if not picture_file_path:
         print("\t\nFailed to get image from Raspberry Pi\n")
         return
-    
+
     # Execution target is edge
     if execution_target == "edge":
         # Run the image classification docker workload on this machine to simulate edge computing
@@ -272,7 +263,8 @@ def main():
     # Execution target is cloud
     else:
         # Tell Rasp. Pi to send the image to the cloud server so it can run the workload
-        run_workload_on_cloud(pi_address, cloud_address)    # Will the cloud server already have the dockerfile, or should we send it to the server from here?
+        run_workload_on_cloud(pi_address,
+                              cloud_address)  # Will the cloud server already have the dockerfile, or should we send it to the server from here?
 
     # Need to somehow get results/logs from Rasp. Pi still
     # get_results_from_pi()
@@ -280,6 +272,7 @@ def main():
     # Need to do calculations on results/logs from the Rasp. Pi
     # 'deadline' input variable will be used in here along with results from get_results_from_pi()
     # output_final_results()
+
 
 if __name__ == "__main__":
     main()
