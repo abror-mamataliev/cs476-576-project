@@ -22,7 +22,7 @@ def run_celery_task(input_data: dict, device_type, url):
 
     start = time()
     try:
-        response = post(url, json=body, timeout=600)
+        response = post(url, json=body)
         latency = (time() - start) * 1000
         return {
             'result': {
