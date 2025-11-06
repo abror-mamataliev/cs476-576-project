@@ -1,15 +1,17 @@
-from base64 import b64encode
-from io import BytesIO
+from base64 import b64decode
 from time import time
 
 from celery import Celery, states
 from celery.result import AsyncResult
 from decouple import config
 from flask import Flask, jsonify, request
-from picamera2 import Picamera2
 from requests import post
 
-from classes.input_data import Device
+
+class Device:
+    EDGE = "edge"
+    CLOUD = "cloud"
+
 
 app = Flask(__name__)
 app.config.update(
@@ -19,8 +21,6 @@ app.config.update(
     CLOUD_DEVICE_URL=config.get('CLOUD_DEVICE_URL'),
 )
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'])
-picam2 = Picamera2()
-picam2.configure(picam2.create_still_configuration(main={"size": (640, 480)}))
 
 
 @celery.task
@@ -29,15 +29,9 @@ def run_celery_task(input_data: dict):
     url = app.config['CLOUD_DEVICE_URL' if device_type == 'cloud' else 'EDGE_DEVICE_URL']
     body = input_data.get('body', {})
 
-    stream = BytesIO()
-    picam2.start()
-    picam2.capture_file(stream, format="jpeg")
-    picam2.stop()
-    stream.seek(0)
-    image_bytes = stream.read()
+    image = body['image']
+    image_bytes = b64decode(image)
     size = len(image_bytes) / 1024  # Size in KB
-    image = b64encode(image_bytes).decode("utf-8")
-    body.update({'image': image})
 
     start = time()
     try:
