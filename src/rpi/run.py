@@ -1,17 +1,9 @@
-from base64 import b64decode
-from time import time
-
-from celery_app import Celery, states
-from celery_app.result import AsyncResult
+from celery import states
+from celery.result import AsyncResult
 from decouple import config
 from flask import Flask, jsonify, request
-from requests import post
 
-
-class Device:
-    EDGE = "edge"
-    CLOUD = "cloud"
-
+from celery_app import celery, run_celery_task
 
 app = Flask(__name__)
 app.config.update(
@@ -20,57 +12,6 @@ app.config.update(
     EDGE_DEVICE_URL=config('EDGE_DEVICE_URL'),
     CLOUD_DEVICE_URL=config('CLOUD_DEVICE_URL'),
 )
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'])
-
-
-@celery.task
-def run_celery_task(input_data: dict):
-    device_type = input_data.get('device', Device.EDGE)
-    url = app.config['CLOUD_DEVICE_URL' if device_type == 'cloud' else 'EDGE_DEVICE_URL']
-    body = input_data.get('body', {})
-
-    image = body['image']
-    image_bytes = b64decode(image)
-    size = len(image_bytes) / 1024  # Size in KB
-
-    start = time()
-    try:
-        response = post(url, json=body, timeout=600)
-        latency = (time() - start) * 1000
-        return {
-            'result': {
-                'status_code': response.status_code,
-                'response': response.json()
-            },
-            'image': {
-                'base64': image,
-                'size': size,
-                'format': "jpeg"
-            },
-            'stats': {
-                'device': device_type,
-                'latency': latency
-            }
-        }
-    except Exception as e:
-        latency = (time() - start) * 1000
-        return {
-            'result': {
-                'status_code': 500,
-                'response': {
-                    'error': f"Error communicating with {device_type} device: {e}"
-                }
-            },
-            'image': {
-                'base64': image,
-                'size': size,
-                'format': "jpeg"
-            },
-            'stats': {
-                'device': device_type,
-                'latency': latency
-            }
-        }
 
 
 @app.route("/")
