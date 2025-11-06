@@ -1,6 +1,8 @@
-import os
-import requests
-import subprocess
+from base64 import b64encode
+from os.path import exists
+
+from decouple import config
+from requests import ConnectTimeout, post
 
 
 def get_input():
@@ -15,23 +17,35 @@ def get_input():
 
     # Gather execution target
     while True:
-        execution_target = input("\nEnter execution target (Edge or Cloud): ").strip().lower()
-        if execution_target in ("edge", "cloud"):
+        execution_target = input(
+            "\nEnter execution target (\"edge\" or \"cloud\"). Default is \"edge\": "
+        ).strip().lower()
+        if execution_target == "":
+            execution_target = "edge"
             break
-        print("Invalid input. Please enter <Edge> or <Cloud>.")
+
+        if execution_target not in ("edge", "cloud"):
+            print("Invalid input. Please enter <Edge> or <Cloud>.")
 
     # Gather deadline
     while True:
-        deadline = input("\nEnter workload deadline (in milliseconds): ").strip()
-        if deadline.isdigit() and int(deadline) > 0:
+        deadline = input("\nEnter workload deadline (in milliseconds). Default is 1000: ").strip()
+        if deadline == "":
+            deadline = 1000
             break
-        print("Invalid input. Please enter a positive integer for the deadline.")
+
+        if not deadline.isdigit() or int(deadline) <= 0:
+            print("Invalid input. Please enter a positive integer for the deadline.")
+        else:
+            deadline = int(deadline)
+            break
 
     # Gather image path
     while True:
         image_path = input("\nEnter image path: ").strip()
-        if os.path.exists(image_path):
+        if exists(image_path):
             break
+
         print("File does not exist. Please enter a valid image path.")
 
     # Display configuration 
@@ -45,39 +59,28 @@ def get_input():
 
 
 def main():
-    # Placeholders
-    pi_address = "..."
-    cloud_address = "..."
+    raspberry_pi_url = config('RASPBERRY_PI_URL')
 
     # Get the simulation parameters from the user
     execution_target, deadline, image_path = get_input()
+    timeout = config('MAX_TIMEOUT', default=10, cast=int)
 
     print("\nBeginning simulation...\n")
 
-    # Read image file and prepare for sending
     with open(image_path, "rb") as img_file:
-        image = img_file.read()
+        image_bytes = img_file.read()
+        image = b64encode(image_bytes).decode("utf-8")
 
-    # Execution target is edge
-    if execution_target == "edge":
-        # Run the image classification docker workload on this machine to simulate edge computing
-        result = run_workload_on_edge(dockerfile_path, picture_file_path)
-
-        # Send the results of the workload to the Rasp. Pi so it can finish its logging
-        send_workload_results_to_pi(pi_address, result["status"], result["classification"])
-
-    # Execution target is cloud
-    else:
-        # Tell Rasp. Pi to send the image to the cloud server so it can run the workload
-        run_workload_on_cloud(pi_address,
-                              cloud_address)  # Will the cloud server already have the dockerfile, or should we send it to the server from here?
-
-    # Need to somehow get results/logs from Rasp. Pi still
-    # get_results_from_pi()
-
-    # Need to do calculations on results/logs from the Rasp. Pi
-    # 'deadline' input variable will be used in here along with results from get_results_from_pi()
-    # output_final_results()
+    try:
+        response = post(raspberry_pi_url, {'device': execution_target, 'body': {'image': image}}, timeout=timeout)
+        response_json = response.json()
+        response_json['stats']['deadline_met'] = response_json['stats']['latency'] <= int(deadline)
+        print("Simulation Results:")
+        print(response_json)
+    except ConnectTimeout as e:
+        print(f"Error: Connection to Raspberry Pi timed out: {e}")
+    except Exception as e:
+        print(f"An error occurred during the simulation: {e}")
 
 
 if __name__ == "__main__":
