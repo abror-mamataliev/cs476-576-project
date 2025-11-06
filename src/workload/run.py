@@ -49,6 +49,11 @@ def preprocess_image(image_path):
     return img
 
 
+@app.route("/")
+def index():
+    return jsonify({'status': "Running"})
+
+
 @app.route("/run", methods=["POST"])
 def run():
     body = request.get_json()
