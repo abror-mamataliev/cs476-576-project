@@ -1,5 +1,4 @@
 celery
 flask
-picamera2
 python-decouple
 requests
