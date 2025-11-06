@@ -1,9 +1,9 @@
-from celery import states
-from celery.result import AsyncResult
+from base64 import b64decode
+from time import time
+
 from decouple import config
 from flask import Flask, jsonify, request
-
-from celery_app import celery, run_celery_task
+from requests import post
 
 
 class Device:
@@ -12,12 +12,7 @@ class Device:
 
 
 app = Flask(__name__)
-app.config.update(
-    CELERY_BROKER_URL=config('CELERY_BROKER_URL', "redis://localhost:6379/0"),
-    CELERY_RESULT_BACKEND=config('CELERY_RESULT_BACKEND', "redis://localhost:6379/0"),
-    EDGE_DEVICE_URL=config('EDGE_DEVICE_URL'),
-    CLOUD_DEVICE_URL=config('CLOUD_DEVICE_URL'),
-)
+app.config.update(EDGE_DEVICE_URL=config('EDGE_DEVICE_URL'), CLOUD_DEVICE_URL=config('CLOUD_DEVICE_URL'))
 
 
 @app.route("/")
@@ -27,22 +22,46 @@ def index():
 
 @app.route("/run/", methods=["POST"])
 def run_task():
-    body = request.get_json()
-    if 'request_id' in body:
-        request_id = body['request_id']
-        task = AsyncResult(request_id, app=celery)
-        match task.state:
-            case states.FAILURE:
-                return jsonify({'status': states.FAILURE, 'error': str(task.result)}), 500
-            case states.SUCCESS:
-                return jsonify({'status': states.SUCCESS, 'result': task.result}), 200
-            case _:
-                return jsonify({'status': task.state})
+    input_data = request.get_json()
+    device_type = input_data.get('device_type', Device.EDGE).lower()
+    url = app.config['EDGE_DEVICE_URL' if device_type == Device.EDGE else 'CLOUD_DEVICE_URL']
+    body = input_data.get('body', {})
 
-    device_type = body.get('device', Device.EDGE)
-    url = app.config['CLOUD_DEVICE_URL' if device_type == 'cloud' else 'EDGE_DEVICE_URL']
-    task = run_celery_task.delay(body, device_type, url)
-    return jsonify({'task_id': task.id})
+    image = body['image']
+    image_bytes = b64decode(image)
+    size = len(image_bytes) / 1024  # Size in KB
+
+    start = time()
+    try:
+        response = post(url, json=body)
+        latency = (time() - start) * 1000
+        return {
+            'result': {
+                'status_code': response.status_code, 'response': response.json()
+            },
+            'image': {
+                'size': size, 'format': "jpeg"
+            },
+            'stats': {
+                'device': device_type, 'latency': latency
+            }
+        }
+    except Exception as e:
+        latency = (time() - start) * 1000
+        return {
+            'result': {
+                'status_code': 500,
+                'response': {
+                    'error': f"Error communicating with {device_type} device: {e}"
+                }
+            },
+            'image': {
+                'size': size, 'format': "jpeg"
+            },
+            'stats': {
+                'device': device_type, 'latency': latency
+            }
+        }, 500
 
 
 if __name__ == "__main__":
