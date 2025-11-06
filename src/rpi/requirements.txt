@@ -1,5 +1,5 @@
 celery
 flask
 python-decouple
-python-redis
+redis
 requests
