@@ -5,6 +5,12 @@ from flask import Flask, jsonify, request
 
 from celery_app import celery, run_celery_task
 
+
+class Device:
+    EDGE = "edge"
+    CLOUD = "cloud"
+
+
 app = Flask(__name__)
 app.config.update(
     CELERY_BROKER_URL=config('CELERY_BROKER_URL', "redis://localhost:6379/0"),
@@ -33,7 +39,9 @@ def run_task():
             case _:
                 return jsonify({'status': task.state})
 
-    task = run_celery_task.delay(body)
+    device_type = body.get('device', Device.EDGE)
+    url = app.config['CLOUD_DEVICE_URL' if device_type == 'cloud' else 'EDGE_DEVICE_URL']
+    task = run_celery_task.delay(body, device_type, url)
     return jsonify({'task_id': task.id})
 
 

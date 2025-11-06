@@ -5,12 +5,6 @@ from celery import Celery
 from decouple import config
 from requests import post
 
-
-class Device:
-    EDGE = "edge"
-    CLOUD = "cloud"
-
-
 celery = Celery(
     __name__,
     broker=config('CELERY_BROKER_URL', "redis://localhost:6379/0"),
@@ -19,11 +13,7 @@ celery = Celery(
 
 
 @celery.task
-def run_celery_task(input_data: dict):
-    from run import app
-
-    device_type = input_data.get('device', Device.EDGE)
-    url = app.config['CLOUD_DEVICE_URL' if device_type == 'cloud' else 'EDGE_DEVICE_URL']
+def run_celery_task(input_data: dict, device_type, url):
     body = input_data.get('body', {})
 
     image = body['image']
