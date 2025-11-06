@@ -15,10 +15,10 @@ class Device:
 
 app = Flask(__name__)
 app.config.update(
-    CELERY_BROKER_URL=config.get('CELERY_BROKER_URL', "redis://localhost:6379/0"),
-    CELERY_RESULT_BACKEND=config.get('CELERY_RESULT_BACKEND', "redis://localhost:6379/0"),
-    EDGE_DEVICE_URL=config.get('EDGE_DEVICE_URL'),
-    CLOUD_DEVICE_URL=config.get('CLOUD_DEVICE_URL'),
+    CELERY_BROKER_URL=config('CELERY_BROKER_URL', "redis://localhost:6379/0"),
+    CELERY_RESULT_BACKEND=config('CELERY_RESULT_BACKEND', "redis://localhost:6379/0"),
+    EDGE_DEVICE_URL=config('EDGE_DEVICE_URL'),
+    CLOUD_DEVICE_URL=config('CLOUD_DEVICE_URL'),
 )
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'])
 
