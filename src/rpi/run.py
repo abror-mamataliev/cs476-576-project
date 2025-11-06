@@ -1,8 +1,8 @@
 from base64 import b64decode
 from time import time
 
-from celery import Celery, states
-from celery.result import AsyncResult
+from celery_app import Celery, states
+from celery_app.result import AsyncResult
 from decouple import config
 from flask import Flask, jsonify, request
 from requests import post
