@@ -24,8 +24,11 @@ def get_input():
             execution_target = "edge"
             break
 
-        if execution_target not in ("edge", "cloud"):
-            print("Invalid input. Please enter <Edge> or <Cloud>.")
+        if execution_target in ("edge", "cloud"):
+            break
+
+        print("Invalid input. Please enter <Edge> or <Cloud>.")
+        continue
 
     # Gather deadline
     while True:
@@ -72,7 +75,7 @@ def main():
         image = b64encode(image_bytes).decode("utf-8")
 
     try:
-        response = post(raspberry_pi_url, {'device': execution_target, 'body': {'image': image}}, timeout=timeout)
+        response = post(raspberry_pi_url, json={'device': execution_target, 'body': {'image': image}}, timeout=timeout)
         response_json = response.json()
         response_json['stats']['deadline_met'] = response_json['stats']['latency'] <= int(deadline)
         print("Simulation Results:")

@@ -23,8 +23,8 @@ def index():
 @app.route("/run/", methods=["POST"])
 def run_task():
     input_data = request.get_json()
-    device_type = input_data.get('device_type', Device.EDGE).lower()
-    url = app.config['EDGE_DEVICE_URL' if device_type == Device.EDGE else 'CLOUD_DEVICE_URL']
+    device = input_data.get('device', Device.EDGE).lower()
+    url = app.config['EDGE_DEVICE_URL' if device == Device.EDGE else 'CLOUD_DEVICE_URL']
     body = input_data.get('body', {})
 
     image = body['image']
@@ -43,7 +43,7 @@ def run_task():
                 'size': size, 'format': "jpeg"
             },
             'stats': {
-                'device': device_type, 'latency': latency
+                'device': device, 'latency': latency
             }
         }
     except Exception as e:
@@ -52,14 +52,14 @@ def run_task():
             'result': {
                 'status_code': 500,
                 'response': {
-                    'error': f"Error communicating with {device_type} device: {e}"
+                    'error': f"Error communicating with {device} device: {e}"
                 }
             },
             'image': {
                 'size': size, 'format': "jpeg"
             },
             'stats': {
-                'device': device_type, 'latency': latency
+                'device': device, 'latency': latency
             }
         }, 500
 
