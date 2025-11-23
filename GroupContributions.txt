@@ -1,0 +1,21 @@
+Abror:
+    
+    Abror was responsible for managing the Raspberry Pi and the cloud server. He implemented much of the communication logic between 
+    the Raspberry Pi, the edge device, and the cloud server, ensuring the components could communicate with eachother and transfer 
+    the sample picture reliably. Specifically, he developed a Python/Flask server that is deployed on the Raspberry Pi that handled 
+    the communication between the other parts of the system, creating an interface for sending and receiving data to the Raspberry Pi.
+    Additionally, he set up the sample Docker image and deployed it across the different parts of the project.
+
+Dhruv:
+
+    Dhruv improved the final output formatting of simulate.py so that the output is neat and easily readable for the user. 
+    He also helped decide that the sample workload within the Docker image should be a simple image recognition program, 
+    he then also helped to implement the program, and communicated with the professor regarding technical details regarding the program.
+    Finally, he created the presentation slides for the project. 
+    
+Jackson:
+
+    Jackson worked on the initial planning for the project by helping define the project’s problem statement and solution statement, 
+    and mapping out how the edge, cloud, and orchestration pieces would fit together. He also clarified project specifications, 
+    requirements and details with the professor. Lastly, he worked on implementing the orchestation script (simulate.py) on the edge 
+    device/users machine.
